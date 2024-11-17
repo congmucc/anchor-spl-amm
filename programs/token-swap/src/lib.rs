@@ -18,17 +18,17 @@ pub mod token_swap {
         instructions::create_amm(ctx, id, fee)
     }
 
-    // pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
-    //     instructions::create_pool(ctx)
-    // }
+    pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
+        instructions::create_pool(ctx)
+    }
 
-    // pub fn deposit_liquidity(
-    //     ctx: Context<DepositLiquidity>,
-    //     amount_a: u64,
-    //     amount_b: u64,
-    // ) -> Result<()> {
-    //     instructions::deposit_liquidity(ctx, amount_a, amount_b)
-    // }
+    pub fn deposit_liquidity(
+        ctx: Context<DepositLiquidity>,
+        amount_a: u64,
+        amount_b: u64,
+    ) -> Result<()> {
+        instructions::deposit_liquidity(ctx, amount_a, amount_b)
+    }
 
     // pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
     //     instructions::withdraw_liquidity(ctx, amount)

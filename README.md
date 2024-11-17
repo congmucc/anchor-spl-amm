@@ -16,6 +16,10 @@
 cluster = "https://api.devnet.solana.com"
 ```
 
+```sh
+anchor test
+```
+
 **Local**
 
 1. Clone Metaplex Token Metadata Program
