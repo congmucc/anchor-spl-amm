@@ -1,5 +1,3 @@
-use std::process::Output;
-
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -12,7 +10,6 @@ use crate::{
     errors::*,
     state::{Amm, Pool},
 };
-
 
 
 pub fn swap_exact_tokens_for_tokens(
@@ -144,12 +141,7 @@ pub fn swap_exact_tokens_for_tokens(
     if invariant > ctx.accounts.pool_account_a.amount * ctx.accounts.pool_account_a.amount {
         return err!(TutorialError::InvariantViolated);
     }
-
-
-
-
-
-
+    
     Ok(())
 }
 

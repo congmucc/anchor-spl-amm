@@ -11,7 +11,6 @@ use crate::{
     state::Pool,
 };
 
-
 pub fn deposit_liquidity(
     ctx: Context<DepositLiquidity>,
     amount_a: u64,
@@ -23,7 +22,6 @@ pub fn deposit_liquidity(
     } else {
         amount_a
     };
-
     let mut amount_b = if amount_b > ctx.accounts.depositor_account_b.amount {
         ctx.accounts.depositor_account_b.amount
     } else {
@@ -36,10 +34,9 @@ pub fn deposit_liquidity(
     // Defining pool creation like this allows attackers to frontrun pool creation with bad ratios
     let pool_creation = pool_a.amount == 0 && pool_b.amount == 0;
     (amount_a, amount_b) = if pool_creation {
-        // Add as is if three is no liquidity
+        // Add as is if there is no liquidity
         (amount_a, amount_b)
-    } else { 
-        // k = x * y
+    } else {
         let ratio = I64F64::from_num(pool_a.amount)
             .checked_mul(I64F64::from_num(pool_b.amount))
             .unwrap();
@@ -49,32 +46,36 @@ pub fn deposit_liquidity(
                     .checked_mul(ratio)
                     .unwrap()
                     .to_num::<u64>(),
-                    amount_b,
+                amount_b,
             )
         } else {
             (
                 amount_a,
                 I64F64::from_num(amount_a)
-                    .checked_mul(ratio)
+                    .checked_div(ratio)
                     .unwrap()
                     .to_num::<u64>(),
             )
         }
     };
 
+    // Computing the amount of liquidity about to be deposited
     let mut liquidity = I64F64::from_num(amount_a)
         .checked_mul(I64F64::from_num(amount_b))
         .unwrap()
         .sqrt()
         .to_num::<u64>();
+
+    // Lock some minimum liquidity on the first deposit
     if pool_creation {
         if liquidity < MINIMUM_LIQUIDITY {
             return err!(TutorialError::DepositTooSmall);
         }
+
         liquidity -= MINIMUM_LIQUIDITY;
     }
 
-    // Transfer user assets to liquidity pool
+    // Transfer tokens to the pool
     token::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -86,8 +87,6 @@ pub fn deposit_liquidity(
         ),
         amount_a,
     )?;
-
-
     token::transfer(
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
@@ -99,21 +98,21 @@ pub fn deposit_liquidity(
         ),
         amount_b,
     )?;
-    
-    // Casting liquidity tokens for users
+
+    // Mint the liquidity to user
     let authority_bump = ctx.bumps.pool_authority;
     let authority_seeds = &[
         &ctx.accounts.pool.amm.to_bytes(),
         &ctx.accounts.mint_a.key().to_bytes(),
         &ctx.accounts.mint_b.key().to_bytes(),
-        LIQUIDITY_SEED,
+        AUTHORITY_SEED,
         &[authority_bump],
     ];
     let signer_seeds = &[&authority_seeds[..]];
     token::mint_to(
         CpiContext::new_with_signer(
-            ctx.accounts.associated_token_program.to_account_info(),
-            MintTo{
+            ctx.accounts.token_program.to_account_info(),
+            MintTo {
                 mint: ctx.accounts.mint_liquidity.to_account_info(),
                 to: ctx.accounts.depositor_account_liquidity.to_account_info(),
                 authority: ctx.accounts.pool_authority.to_account_info(),
@@ -122,10 +121,9 @@ pub fn deposit_liquidity(
         ),
         liquidity,
     )?;
+
     Ok(())
 }
-
-
 
 #[derive(Accounts)]
 pub struct DepositLiquidity<'info> {

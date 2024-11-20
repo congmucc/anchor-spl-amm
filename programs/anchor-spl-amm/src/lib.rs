@@ -1,4 +1,5 @@
 #![allow(clippy::result_large_err)]
+
 use anchor_lang::prelude::*;
 
 mod constants;
@@ -6,12 +7,13 @@ mod errors;
 mod instructions;
 mod state;
 
-pub use instructions::*;
+use instructions::*;
 
-declare_id!("52GXhYuU4P4mfcJnvuuhdhfEPfooE8khK4PmcZg7XaFM");
+declare_id!("5pCZ4MZ1BU4FSx7zWxCtAQ5vyhxWLikoZpLV6biPG8Rj");
+
 
 #[program]
-pub mod token_swap {
+pub mod anchor_spl_amm {
     
     use super::*;
     pub fn create_amm(ctx: Context<CreateAmm>, id: Pubkey, fee: u16) -> Result<()> {
@@ -30,16 +32,16 @@ pub mod token_swap {
         instructions::deposit_liquidity(ctx, amount_a, amount_b)
     }
 
-    // pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
-    //     instructions::withdraw_liquidity(ctx, amount)
-    // }
+    pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
+        instructions::withdraw_liquidity(ctx, amount)
+    }
 
-    // pub fn swap_exact_tokens_for_tokens(
-    //     ctx: Context<SwapExactTokensForTokens>,
-    //     swap_a: bool,
-    //     input_amount: u64,
-    //     min_output_amount: u64,
-    // ) -> Result<()> {
-    //     instructions::swap_exact_tokens_for_tokens(ctx, swap_a, input_amount, min_output_amount)
-    // }
+    pub fn swap_exact_tokens_for_tokens(
+        ctx: Context<SwapExactTokensForTokens>,
+        swap_a: bool,
+        input_amount: u64,
+        min_output_amount: u64,
+    ) -> Result<()> {
+        instructions::swap_exact_tokens_for_tokens(ctx, swap_a, input_amount, min_output_amount)
+    }
 }
