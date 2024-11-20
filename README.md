@@ -141,3 +141,18 @@ programs/anchor_spl_amm/src/
   > `output = (pool_a.amount + taxed_input) / taxed_input * pool_b.amount`
   > This is essentially `x * y = k` x is pool_a.amount, y is pool_b.amount
 
+  **Slip point protection**
+  ```rust
+  if output < min_output_amount {
+        return err!(TutorialError::OutputTooSmall);
+    }
+  ```
+  > `output < min_output_amount` value is as a parameter
+
+  **Invariant**
+  ```rust
+  if invariant > ctx.accounts.pool_account_a.amount * ctx.accounts.pool_account_a.amount {
+        return err!(TutorialError::InvariantViolated);
+    }
+  ```
+  > `invariant > pool_a.amount * pool_a.amount` Just need to be greater than.
