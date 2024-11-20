@@ -43,7 +43,7 @@ anchor test
     ```
     > **需要在`genesis`文件夹下**运行这段代码之后会开启一启动本地的 Solana 测试验证器，并会将 Metaplex Token Metadata 程序部署到 Localnet。
     > 
-    > 此时可以在 [Explorer | Solana](https://explorer.solana.com/?cluster=custom)进行查看带有Metaplex部署好的Solana区块链，默认端口`8900`
+    > 此时可以在 [Explorer | Solana](https://explorer.solana.com/?cluster=custom)进行查看带有Metaplex部署好的Solana区块链，默认端口`8899`
 
 
     此时需要修改一下`Anchor.toml`，如下：
@@ -61,6 +61,12 @@ anchor test
     ```sh
     anchor test --provider.cluster http://localhost:8899 --skip-local-validator
     ```
+    > 这个是包含了build和deploy的。
+    ```sh
+    anchor test --provider.cluster http://localhost:8899 --skip-build --skip-deploy
+    ```
+    > 这个是只测试的。 前提是部署完毕之后
+
 
 
 
@@ -70,7 +76,7 @@ anchor test
 ### File Tree
 
 ```rust
-programs/token-swap/src/
+programs/anchor_spl_amm/src/
 ├── constants.rs
 ├── errors.rs
 ├── instructions
@@ -83,3 +89,55 @@ programs/token-swap/src/
 ├── lib.rs
 └── state.rs
 ```
+
+### Core Logic
+ 
+
+- `deposit_liquidity.rs`
+  **Deposit formula**
+  ```rust
+   let ratio = I64F64::from_num(pool_a.amount)
+        .checked_mul(I64F64::from_num(pool_b.amount))
+        .unwrap();
+    if pool_a.amount > pool_b.amount {
+        (
+            I64F64::from_num(amount_b)
+                .checked_mul(ratio)
+                .unwrap()
+                .to_num::<u64>(),
+            amount_b,
+        )
+    } 
+  ```
+  > `ratio = pool_a.amount * pool_b.amount`
+  > `adjusted_amount_b = amount_a / ratio`
+
+
+  **Liquidity injection formula**
+    ```rust
+    let mut liquidity = I64F64::from_num(amount_a)
+        .checked_mul(I64F64::from_num(amount_b))
+        .unwrap()
+        .sqrt()
+        .to_num::<u64>();
+    ```
+    > `liquidity = sqrt(amount_a * amount_b)`
+ 
+
+- `swap_exact_tokens_for_tokens.rs`
+  **Swap formula**
+  ```rust
+    I64F64::from_num(taxed_input)
+        .checked_mul(I64F64::from_num(pool_b.amount))
+        .unwrap()
+        .checked_div(
+            I64F64::from_num(pool_a.amount)
+            .checked_add(I64F64::from_num(taxed_input))
+            .unwrap(),
+        )
+        .unwrap()
+  ```
+
+  > `output = (pool_a.amount + taxed_input) / taxed_input * pool_b.amount`
+  > This is essentially `x * y = k` x is pool_a.amount, y is pool_b.amount
+
