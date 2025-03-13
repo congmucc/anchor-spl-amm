@@ -122,7 +122,19 @@ programs/anchor_spl_amm/src/
         .to_num::<u64>();
     ```
     > `liquidity = sqrt(amount_a * amount_b)`
- 
+
+  **Lock some minimum liquidity**
+  ```rust
+      if pool_creation {
+        if liquidity < MINIMUM_LIQUIDITY {
+            return err!(TutorialError::DepositTooSmall);
+        }
+
+        liquidity -= MINIMUM_LIQUIDITY;
+    }
+  ```
+  > Lock some minimum liquidity on the first deposit
+
 
 - `swap_exact_tokens_for_tokens.rs`
   **Swap formula**
