@@ -1,4 +1,44 @@
-## Token swap example amm in anchor rust
+## Anchor SPL AMM - 高级自动做市商
+
+这是一个基于Solana区块链的高级自动做市商(AMM)实现，使用Anchor框架开发。项目实现了传统AMM的核心功能，同时增加了多项创新的流动性管理、价格影响控制和费用策略功能。
+
+### 功能亮点
+
+- **集中流动性管理**: 允许LP在指定价格区间内提供流动性，提高资本效率
+- **动态费用策略**: 支持固定、动态、分层和波动率调整四种费用计算方式
+- **价格影响控制**: 精确计算和限制滑点，保护交易者免受过高价格影响
+- **波动率追踪**: 记录分析价格波动，为流动性提供者提供无常损失补偿
+- **模块化设计**: 清晰的代码结构便于扩展和维护
+
+### 技术优化
+
+- 针对Solana 4KB堆栈限制进行优化:
+  - 使用结构分解减少同时验证的账户数量
+  - 采用Box引用降低堆栈使用
+  - 函数拆分减少复杂指令处理的堆栈压力
+
+### File Tree
+
+```rust
+programs/anchor_spl_amm/src/
+├── constants.rs
+├── errors.rs
+├── instructions
+│   ├── create_amm.rs
+│   ├── create_pool.rs
+│   ├── deposit_liquidity.rs
+│   ├── mod.rs
+│   ├── swap_exact_tokens_for_tokens.rs
+│   └── withdraw_liquidity.rs
+├── lib.rs
+├── models
+│   ├── concentrated_liquidity.rs
+│   ├── fee_strategy.rs
+│   ├── mod.rs
+│   ├── price_impact.rs
+│   └── volatility.rs
+└── state.rs
+```
 
 ### How to use
 
@@ -67,104 +107,83 @@ anchor test
     ```
     > 这个是只测试的。 前提是部署完毕之后
 
+### 核心逻辑与高级功能
 
+#### 核心AMM公式
 
-
-
-
-
-### File Tree
-
-```rust
-programs/anchor_spl_amm/src/
-├── constants.rs
-├── errors.rs
-├── instructions
-│   ├── create_amm.rs
-│   ├── create_pool.rs
-│   ├── deposit_liquidity.rs
-│   ├── mod.rs
-│   ├── swap_exact_tokens_for_tokens.rs
-│   └── withdraw_liquidity.rs
-├── lib.rs
-└── state.rs
-```
-
-### Core Logic
- 
-
-- `deposit_liquidity.rs`
-  **Deposit formula**
+- **流动性存入公式**
   ```rust
-   let ratio = I64F64::from_num(pool_a.amount)
-        .checked_mul(I64F64::from_num(pool_b.amount))
-        .unwrap();
-    if pool_a.amount > pool_b.amount {
-        (
-            I64F64::from_num(amount_b)
-                .checked_mul(ratio)
-                .unwrap()
-                .to_num::<u64>(),
-            amount_b,
-        )
-    } 
+  let liquidity = I64F64::from_num(amount_a)
+      .checked_mul(I64F64::from_num(amount_b))
+      .unwrap()
+      .sqrt()
+      .to_num::<u64>();
   ```
-  > `ratio = pool_a.amount * pool_b.amount`
-  > `adjusted_amount_b = amount_a / ratio`
+  > 流动性计算: `liquidity = sqrt(amount_a * amount_b)`
 
-
-  **Liquidity injection formula**
-    ```rust
-    let mut liquidity = I64F64::from_num(amount_a)
-        .checked_mul(I64F64::from_num(amount_b))
-        .unwrap()
-        .sqrt()
-        .to_num::<u64>();
-    ```
-    > `liquidity = sqrt(amount_a * amount_b)`
-
-  **Lock some minimum liquidity**
+- **交换公式**
   ```rust
-      if pool_creation {
-        if liquidity < MINIMUM_LIQUIDITY {
-            return err!(TutorialError::DepositTooSmall);
-        }
-
-        liquidity -= MINIMUM_LIQUIDITY;
-    }
+  let output = I64F64::from_num(taxed_input)
+      .checked_mul(I64F64::from_num(pool_b.amount))
+      .unwrap()
+      .checked_div(
+          I64F64::from_num(pool_a.amount)
+          .checked_add(I64F64::from_num(taxed_input))
+          .unwrap(),
+      )
+      .unwrap();
   ```
-  > Lock some minimum liquidity on the first deposit
+  > 基于恒定乘积公式 `x * y = k`
 
+#### 高级功能
 
-- `swap_exact_tokens_for_tokens.rs`
-  **Swap formula**
+- **集中流动性**
   ```rust
-    I64F64::from_num(taxed_input)
-        .checked_mul(I64F64::from_num(pool_b.amount))
-        .unwrap()
-        .checked_div(
-            I64F64::from_num(pool_a.amount)
-            .checked_add(I64F64::from_num(taxed_input))
-            .unwrap(),
-        )
-        .unwrap()
+  // 集中流动性配置
+  pub struct ConcentratedLiquidityConfig {
+      pub enabled: bool,
+      pub range_percentage: i64,  // 价格范围百分比
+      pub min_width: i64,         // 最小价格区间宽度
+  }
+
+  // 计算价格范围
+  let lower_price = current_price * (I64F64::from_num(1) - range_percentage);
+  let upper_price = current_price * (I64F64::from_num(1) + range_percentage);
   ```
 
-  > `output = (pool_a.amount + taxed_input) / taxed_input * pool_b.amount`
-  > This is essentially `x * y = k` x is pool_a.amount, y is pool_b.amount
-
-  **Slip point protection**
+- **动态费用策略**
   ```rust
-  if output < min_output_amount {
-        return err!(TutorialError::OutputTooSmall);
-    }
+  // 动态费率计算
+  pub enum FeeStrategy {
+      Fixed,                  // 固定费率
+      Dynamic,                // 根据交易量动态调整
+      Tiered,                 // 基于交易量的分层费率
+      VolatilityAdjusted,     // 根据市场波动率调整
+  }
   ```
-  > `output < min_output_amount` value is as a parameter
 
-  **Invariant**
+- **价格影响保护**
   ```rust
-  if invariant > ctx.accounts.pool_account_a.amount * ctx.accounts.pool_account_a.amount {
-        return err!(TutorialError::InvariantViolated);
-    }
+  // 价格影响检查
+  if !PriceImpactCalculator::is_price_impact_acceptable(
+      &amm.price_impact_config,
+      price_impact
+  ) {
+      return err!(TutorialError::PriceImpactTooHigh);
+  }
   ```
-  > `invariant > pool_a.amount * pool_a.amount` Just need to be greater than.
+
+- **波动率追踪与无常损失计算**
+  ```rust
+  // 无常损失计算公式: 2√P/(1+P) - 1，其中P是价格比率
+  let price_ratio = current_price / initial_price;
+  let sqrt_ratio = price_ratio.sqrt();
+  let il_percentage = I64F64::from_num(2)
+      .checked_mul(sqrt_ratio)
+      .unwrap()
+      .checked_div(I64F64::from_num(1).checked_add(price_ratio).unwrap())
+      .unwrap()
+      .checked_sub(I64F64::from_num(1))
+      .unwrap()
+      .abs();
+  ```
