@@ -47,6 +47,11 @@ impl Default for FeeConfig {
     }
 }
 
+impl FeeConfig {
+    // 计算结构体的大小：枚举(1) + 4个u16(8)
+    pub const LEN: usize = 1 + 4 * 2;
+}
+
 /// 费用计算器
 pub struct FeeCalculator;
 

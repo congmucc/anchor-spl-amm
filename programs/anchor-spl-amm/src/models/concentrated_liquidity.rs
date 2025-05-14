@@ -10,6 +10,8 @@ pub struct ConcentratedLiquidityConfig {
     pub range_percentage: u16,
     /// 聚合流动性奖励系数（放大1000倍），用于计算提供聚合流动性的额外奖励
     pub reward_multiplier: u16,
+    /// 最小范围宽度
+    pub min_width: i64,
 }
 
 impl Default for ConcentratedLiquidityConfig {
@@ -18,8 +20,14 @@ impl Default for ConcentratedLiquidityConfig {
             enabled: false,
             range_percentage: 10, // 默认范围为当前价格的±10%
             reward_multiplier: 1200, // 默认奖励系数为1.2（1200/1000）
+            min_width: 0,
         }
     }
+}
+
+impl ConcentratedLiquidityConfig {
+    // 计算结构体的大小：bool(1) + 2个i64(16)
+    pub const LEN: usize = 1 + 16;
 }
 
 /// 聚合流动性价格计算

@@ -25,4 +25,10 @@ pub enum TutorialError {
     
     #[msg("Invalid price configuration")]
     InvalidPriceConfig,
+    
+    #[msg("Price impact is too high")]
+    PriceImpactTooHigh,
+    
+    #[msg("Trade is not beneficial to the user")]
+    TradeNotBeneficial,
 }

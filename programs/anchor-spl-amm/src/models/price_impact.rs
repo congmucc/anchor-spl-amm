@@ -12,6 +12,11 @@ pub struct PriceImpactConfig {
     pub dynamic_adjustment_factor: u16,
 }
 
+impl PriceImpactConfig {
+    // 计算结构体的大小：bool(1) + 2个u16(4)
+    pub const LEN: usize = 1 + 2 * 2;
+}
+
 impl Default for PriceImpactConfig {
     fn default() -> Self {
         Self {

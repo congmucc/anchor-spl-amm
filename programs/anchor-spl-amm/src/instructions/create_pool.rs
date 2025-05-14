@@ -1,12 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
+    token::{self, Mint, Token, TokenAccount},
 };
+use fixed::types::I64F64;
 
 use crate::{
     constants::{AUTHORITY_SEED, LIQUIDITY_SEED},
     state::{Amm, Pool},
+    models::volatility::VolatilityTracker,
 };
 
 // 分为两部分的指令实现
@@ -19,6 +21,21 @@ pub fn create_pool(ctx: Context<CreatePool>, initial_price: u64) -> Result<()> {
     
     // 设置初始价格
     pool.initial_price = initial_price;
+    
+    // 初始化波动率追踪器
+    pool.volatility_tracker = VolatilityTracker::default();
+    
+    // 如果开启了集中流动性，计算价格范围
+    if ctx.accounts.amm.concentrated_liquidity_config.enabled {
+        let current_price = I64F64::from_num(initial_price);
+        let range_percentage = I64F64::from_num(ctx.accounts.amm.concentrated_liquidity_config.range_percentage) / I64F64::from_num(100);
+        
+        // 计算下限和上限价格
+        let _lower_price = current_price * (I64F64::from_num(1) - range_percentage);
+        let _upper_price = current_price * (I64F64::from_num(1) + range_percentage);
+        
+        // 未来可以将这些价格存储在池中，用于集中流动性范围的验证
+    }
 
     Ok(())
 }
