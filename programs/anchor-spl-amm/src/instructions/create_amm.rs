@@ -1,12 +1,16 @@
 use anchor_lang::prelude::*;
 
-use crate::{errors::*, state::Amm};
+use crate::{
+    errors::*,
+    state::Amm,
+};
 
 pub fn create_amm(ctx: Context<CreateAmm>, id: Pubkey, fee: u16) -> Result<()> {
     let amm = &mut ctx.accounts.amm;
     amm.id = id;
     amm.admin = ctx.accounts.admin.key();
     amm.fee = fee;
+    
     Ok(())
 }
 

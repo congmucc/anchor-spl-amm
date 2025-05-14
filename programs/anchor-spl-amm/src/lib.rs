@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 mod constants;
 mod errors;
 mod instructions;
+mod models;
 mod state;
 
 use instructions::*;
@@ -20,8 +21,8 @@ pub mod anchor_spl_amm {
         instructions::create_amm(ctx, id, fee)
     }
 
-    pub fn create_pool(ctx: Context<CreatePool>) -> Result<()> {
-        instructions::create_pool(ctx)
+    pub fn create_pool(ctx: Context<CreatePool>, initial_price: u64) -> Result<()> {
+        instructions::create_pool(ctx, initial_price)
     }
 
     pub fn deposit_liquidity(

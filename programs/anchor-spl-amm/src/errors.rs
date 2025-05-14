@@ -16,4 +16,13 @@ pub enum TutorialError {
 
     #[msg("Invariant does not hold")]
     InvariantViolated,
+    
+    #[msg("The price impact exceeds the maximum allowed slippage")]
+    ExcessiveSlippage,
+    
+    #[msg("Volatility is too high")]
+    ExcessiveVolatility,
+    
+    #[msg("Invalid price configuration")]
+    InvalidPriceConfig,
 }

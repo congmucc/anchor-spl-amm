@@ -8,10 +8,20 @@ use fixed::types::I64F64;
 use crate::{
     constants::{AUTHORITY_SEED, LIQUIDITY_SEED, MINIMUM_LIQUIDITY},
     errors::TutorialError,
-    state::Pool,
+    state::{Pool, Amm},
 };
 
+// 分为两部分的指令实现
 pub fn deposit_liquidity(
+    ctx: Context<DepositLiquidity>,
+    amount_a: u64,
+    amount_b: u64,
+) -> Result<()> {
+    deposit_liquidity_process(ctx, amount_a, amount_b)
+}
+
+// 处理实际的存款逻辑
+fn deposit_liquidity_process(
     ctx: Context<DepositLiquidity>,
     amount_a: u64,
     amount_b: u64,
@@ -127,6 +137,14 @@ pub fn deposit_liquidity(
 
 #[derive(Accounts)]
 pub struct DepositLiquidity<'info> {
+    #[account(
+        seeds = [
+            amm.id.as_ref()
+        ],
+        bump,
+    )]
+    pub amm: Box<Account<'info, Amm>>,
+
     #[account(
         seeds = [
             pool.amm.as_ref(),

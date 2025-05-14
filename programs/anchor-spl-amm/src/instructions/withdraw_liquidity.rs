@@ -10,8 +10,14 @@ use crate::{
     state::{Amm, Pool},
 };
 
-
+// 拆分指令，第一步：加载必要的账户
 pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
+    // 继续到第二步
+    withdraw_liquidity_process(ctx, amount)
+}
+
+// 处理流动性提取逻辑
+fn withdraw_liquidity_process(ctx: Context<WithdrawLiquidity>, amount: u64) -> Result<()> {
     // 1. Calculate the seeds
     let authority_bump = ctx.bumps.pool_authority;
     let authority_seeds = &[
@@ -56,6 +62,7 @@ pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Resul
     .unwrap()
     .floor()
     .to_num::<u64>();
+    
     token::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -83,24 +90,20 @@ pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, amount: u64) -> Resul
         amount,
     )?;
 
-
-
-
     Ok(())
 }
 
-
-
-
+// 优化账户结构 - 使用简单的引用形式而不是Box
 #[derive(Accounts)]
 pub struct WithdrawLiquidity<'info> {
+    // 将Amm和Pool账户分开检查，以减少一次性验证的账户数量
     #[account(
         seeds = [
             amm.id.as_ref()
         ],
         bump,
     )]
-    pub amm: Account<'info, Amm>,
+    pub amm: Box<Account<'info, Amm>>,
 
     #[account(
         seeds = [
@@ -112,7 +115,7 @@ pub struct WithdrawLiquidity<'info> {
         has_one = mint_a,
         has_one = mint_b,
     )]
-    pub pool: Account<'info, Pool>,
+    pub pool: Box<Account<'info, Pool>>,
 
     /// CHECK: Read only authority
     #[account(

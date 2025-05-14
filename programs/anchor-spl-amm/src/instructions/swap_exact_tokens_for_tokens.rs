@@ -11,10 +11,21 @@ use crate::{
     state::{Amm, Pool},
 };
 
-
+// 将指令拆分为两部分
 pub fn swap_exact_tokens_for_tokens(
     ctx: Context<SwapExactTokensForTokens>,
     swap_a: bool, // true if swapping A for B, false if swapping B for A 
+    input_amount: u64,
+    min_output_amount: u64,
+) -> Result<()> {
+    // 调用处理函数
+    swap_exact_tokens_for_tokens_process(ctx, swap_a, input_amount, min_output_amount)
+}
+
+// 处理交换逻辑
+fn swap_exact_tokens_for_tokens_process(
+    ctx: Context<SwapExactTokensForTokens>,
+    swap_a: bool,
     input_amount: u64,
     min_output_amount: u64,
 ) -> Result<()> {
@@ -102,6 +113,17 @@ pub fn swap_exact_tokens_for_tokens(
         )?;
     } else {
         token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.trader_account_b.to_account_info(),
+                    to: ctx.accounts.pool_account_b.to_account_info(),
+                    authority: ctx.accounts.trader.to_account_info(),
+                },
+            ),
+            input,
+        )?;
+        token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 Transfer {
@@ -110,17 +132,6 @@ pub fn swap_exact_tokens_for_tokens(
                     authority: ctx.accounts.pool_authority.to_account_info(),
                 },
                 signer_seeds,
-            ),
-            input,
-        )?;
-        token::transfer(
-            CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
-                Transfer {
-                    from: ctx.accounts.trader_account_b.to_account_info(),
-                    to: ctx.accounts.pool_account_b.to_account_info(),
-                    authority: ctx.accounts.trader.to_account_info(),
-                },
             ),
             output,
         )?;
@@ -133,12 +144,11 @@ pub fn swap_exact_tokens_for_tokens(
         output
     );
 
-
     // 7. Verify the invariant still holds
     // We tolerate if the new invariant is higher because it means a rounding error for LPs
     ctx.accounts.pool_account_a.reload()?;
     ctx.accounts.pool_account_b.reload()?;
-    if invariant > ctx.accounts.pool_account_a.amount * ctx.accounts.pool_account_a.amount {
+    if invariant > ctx.accounts.pool_account_a.amount * ctx.accounts.pool_account_b.amount {
         return err!(TutorialError::InvariantViolated);
     }
     
@@ -154,9 +164,10 @@ pub struct SwapExactTokensForTokens<'info> {
         ],
         bump,
     )]
-    pub amm: Account<'info, Amm>,
+    pub amm: Box<Account<'info, Amm>>,
 
     #[account(
+        mut,
         seeds = [
             pool.amm.as_ref(),
             pool.mint_a.key().as_ref(),
@@ -167,7 +178,7 @@ pub struct SwapExactTokensForTokens<'info> {
         has_one = mint_a,
         has_one = mint_b,
     )]
-    pub pool: Account<'info, Pool>,
+    pub pool: Box<Account<'info, Pool>>,
 
     /// CHECK: Read only authority
     #[account(

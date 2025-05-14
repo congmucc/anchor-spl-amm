@@ -18,7 +18,6 @@ impl Amm {
 }
 
 #[account]
-#[derive(Default)]
 pub struct Pool {
     /// Primary key of the AMM
     pub amm: Pubkey,
@@ -28,8 +27,22 @@ pub struct Pool {
 
     /// Mint of token B
     pub mint_b: Pubkey,
+    
+    /// 初始价格，用于价格参考
+    pub initial_price: u64,
 }
 
 impl Pool {
-    pub const LEN: usize = 8 + 32 + 32 + 32;
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 8;
+}
+
+impl Default for Pool {
+    fn default() -> Self {
+        Self {
+            amm: Pubkey::default(),
+            mint_a: Pubkey::default(),
+            mint_b: Pubkey::default(),
+            initial_price: 0,
+        }
+    }
 }
